@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+from tkinter.ttk import Progressbar
+import time
+import threading				
 import sys
 import os 
 import os.path
+from pathlib import Path						
 import datetime
 import json			   	   
 import subprocess
@@ -361,7 +364,7 @@ def control_cb():
 	"\\usepackage[latin1]{inputenc}\n"
 	"\\usepackage{graphicx}\n"
 	"\\usepackage[ngerman]{babel}\n"
-	"\\usepackage[solution_on]{mathematik} % solution_on/off\n"
+	"\\usepackage[solution_on]{srdp-mathematik} % solution_on/off\n"
 	"\setcounter{Zufall}{0}\n\n\n"
 	"\pagestyle{empty} %PAGESTYLE: empty, plain, fancy\n"
 	"\onehalfspacing %Zeilenabstand\n"
@@ -432,7 +435,7 @@ def control_cb():
 				if all in element:
 					gesammeltedateien.append(element)
 
-		gesammeltedateien=sorted(gesammeltedateien)
+		gesammeltedateien.sort(key=natural_keys)
 
 		
 		if not len(entry_suchbegriffe.get()) ==0:
