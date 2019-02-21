@@ -2,11 +2,10 @@
 # -*- coding: utf-8 -*-
 from tkinter.ttk import Progressbar
 import time
-import threading				
+import threading
 import sys
 import os 
 import os.path
-from pathlib import Path						
 import datetime
 import json			   	   
 import subprocess
@@ -178,7 +177,7 @@ themen_klasse_6={'BSW':'Beschreibende Statistik\nund Wahrscheinlichkeit','FO':'F
 'PWLU':'Potenzen, Wurzeln, Logarithmen\nund Ungleichungen','RE':'Reihen',
 'RF':'Reelle Funktionen','VAG3':'Vektoren und analytische\nGeometrie in R3 und Rn'}
 themen_klasse_7={'DR':'Differentialrechnung','DWV':'Diskrete Wahrscheinlichkeits-\nverteilungen',
-'KKK':'Kreise, Kugeln, Kegelschnittslinien\nund andere Kurven','KZ':'Komplexe Zahlen','WM':'Wirtschaftsmathematik','GHG':'Gleichungen höheren Grades als 2'}
+'KKK':'Kreise, Kugeln, Kegelschnittslinien\nund andere Kurven','KZ':'Komplexe Zahlen','WM':'Wirtschaftsmathematik'}
 themen_klasse_8={'DDG':'Differenzen- und Differential-\ngleichungen; Grundlagen\nder Systemdynamik','IR':'Integralrechnung',
 'SWS':'Stetgie Wahrscheinlichkeits-\nverteilungen; Beurteilende\nStatistik','WM':'Wirtschaftsmathematik'}
 
@@ -257,18 +256,8 @@ def natural_keys(text):
     return [ atoi(c) for c in re.split('(\d+)', text) ]	
 
 def create_pdf():
-	working_path = os.path.join(os.path.dirname(__file__),'Teildokument')
-	print("Working path: ",working_path)
-	subprocess.Popen('latex --synctex=-1 Teildokument.tex',cwd=working_path,shell=True).wait()
-	subprocess.Popen('dvips Teildokument.dvi',cwd=working_path,shell=True).wait()
-	subprocess.Popen('ps2pdf Teildokument.ps',cwd=working_path,shell=True).wait()
-	if sys.platform.startswith('linux'):
-		 subprocess.run(['xdg-open', "Teildokument.pdf"],cwd=working_path)
-	elif sys.platform.startswith('darwin'):
-		 subprocess.run(['xdg-open', "Teildokument.pdf"],cwd=working_path)
-	else:
-		# os.system(filename_teildokument)
-		subprocess.Popen('Teildokument.pdf',cwd=working_path).poll()
+	subprocess.Popen('cd Teildokument & latex --synctex=-1 Teildokument.tex & dvips Teildokument.dvi & ps2pdf Teildokument.ps',shell=True).wait()
+	subprocess.Popen('cd Teildokument & Teildokument.pdf', shell=True).poll()
 	os.unlink('Teildokument/Teildokument.aux')
 	os.unlink('Teildokument/Teildokument.log')
 	os.unlink('Teildokument/Teildokument.dvi')
@@ -318,8 +307,8 @@ def refresh():
 		# print(beispieldaten_dateipfad)
 		# print(beispieldaten)
 		
-	log_file=os.path.join(os.path.dirname(__file__),'Teildokument','log_file')
-	with open(log_file, 'w', encoding='ISO-8859-1') as f:
+	log_file=os.path.join(os.path.dirname('__file__'),'Teildokument','log_file')
+	with open(log_file, 'w') as f:
 		json.dump(beispieldaten_dateipfad, f)
 	
 	label_update.config(text='Last Update: '+modification_date(log_file).strftime('%d.%m.%y - %H:%M'))			  
@@ -367,7 +356,7 @@ def control_cb():
 		beispieldaten=list(beispieldaten_dateipfad.keys())						  
 
 	
-	filename_teildokument = os.path.join(os.path.dirname(__file__),'Teildokument','Teildokument.tex')
+	filename_teildokument = os.path.join(os.path.dirname('__file__'),'Teildokument','Teildokument.tex')
 	try:
 	    file=open(filename_teildokument,"w", encoding='ISO-8859-1')
 	except FileNotFoundError:
@@ -382,7 +371,7 @@ def control_cb():
 	"\\usepackage[latin1]{inputenc}\n"
 	"\\usepackage{graphicx}\n"
 	"\\usepackage[ngerman]{babel}\n"
-	"\\usepackage[solution_on]{srdp-mathematik} % solution_on/off\n"
+	"\\usepackage[solution_on]{mathematik} % solution_on/off\n"
 	"\setcounter{Zufall}{0}\n\n\n"
 	"\pagestyle{empty} %PAGESTYLE: empty, plain, fancy\n"
 	"\onehalfspacing %Zeilenabstand\n"
@@ -453,7 +442,7 @@ def control_cb():
 				if all in element:
 					gesammeltedateien.append(element)
 
-		gesammeltedateien.sort(key=natural_keys)
+		gesammeltedateien=sorted(gesammeltedateien)
 
 		
 		if not len(entry_suchbegriffe.get()) ==0:
@@ -546,9 +535,27 @@ def control_cb():
 	"\end{document}")
 	file.close()
 	
-	hauptfenster.destroy()
-	create_pdf()
-	print("Insgesamt wurde(n) " + str(len(dict_gesammeltedateien)) + " Beispiel(e) gefunden. Entsprechende LaTeX-Datei wird ausgegeben...")
+	
+	window_loading = Tk()
+	window_loading.title('Lade...')
+	window_loading.geometry('+300+200')
+	def loading_bar():
+		def start_loading_bar():
+			progress.grid(row=2,column=0)
+			progress.start()
+			create_pdf()
+			progress.stop()
+			window_loading.destroy()
+		hauptfenster.destroy()
+		threading.Thread(target=start_loading_bar).start()
+
+	label_output=Label(window_loading, text='Insgesamt wurde(n) '+ str(len(dict_gesammeltedateien)) + ' Beispiel(e) gefunden.\n', font=LARGE_FONT).grid(row=0,column=0)	
+	label_loading = Label(window_loading , text='Lade PDF Datei...', font=LARGE_FONT).grid(row=1,column=0)
+	progress = Progressbar(window_loading , orient=HORIZONTAL,length=250,  mode='indeterminate')
+	loading_bar()
+	window_loading.mainloop()	
+	
+	# print("Insgesamt wurde(n) " + str(len(dict_gesammeltedateien)) + " Beispiel(e) gefunden. Entsprechende LaTeX-Datei wird ausgegeben...", font=STANDARD_FONT)
 	# if sys.platform.startswith('linux'):
 		# subprocess.run(['xdg-open', filename_teildokument])
 	# elif sys.platform.startswith('darwin'):
@@ -805,7 +812,7 @@ explanation.grid(row=0,column=0,sticky=W)
 button_refresh_ddb=Button(frame_refresh_ddb, text='Refresh Database', command=refresh)
 button_refresh_ddb.grid(row=0, column=0, sticky=W)
 try:
-	log_file=os.path.join(os.path.dirname(__file__),'Teildokument','log_file')
+	log_file=os.path.join(os.path.dirname('__file__'),'Teildokument','log_file')
 	label_update=Label(frame_refresh_ddb, text='Last Update: '+modification_date(log_file).strftime('%d.%m.%y - %H:%M'))
 except FileNotFoundError:
 	label_update=Label(frame_refresh_ddb, text='Last Update: ---')
